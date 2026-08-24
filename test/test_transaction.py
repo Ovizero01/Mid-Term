@@ -41,13 +41,8 @@ def test_read_specific_transactions():
     assert response.status_code == status.HTTP_200_OK
 
 def test_create_transaction():
-    db = SessionLocal()
-    db.query(Transaction).filter(Transaction.id == 0).delete()
-    db.query()
-    db.commit()
 
     request_data = {
-        "id": 0,
         "title": "Test Transaction",
         "amount": 250.50,
         "type": "expense",
@@ -55,9 +50,33 @@ def test_create_transaction():
         "date": "2026-08-24T14:00:00"
     }
 
-    response = client.post('/transactions', json=request_data)
+    response = client.post(
+        '/transactions',
+        json=request_data
+    )
+
     assert response.status_code == status.HTTP_201_CREATED
-    assert response.json() == {'message': 'Transaction created successfully'}
+
+    data = response.json()
+
+    assert data['title'] == 'Test Transaction'
+    assert data['amount'] == 250.50
+    assert data['type'] == 'expense'
+    assert data['category'] == 'Food'
+    assert data['owner_id'] == 1
+
+    # Remove the transaction created by this test
+    db = SessionLocal()
+
+    try:
+        db.query(Transaction).filter(
+            Transaction.id == data['id']
+        ).delete()
+
+        db.commit()
+
+    finally:
+        db.close()
 
 def test_update_transaction():
     request_data = {

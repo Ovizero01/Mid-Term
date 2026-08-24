@@ -84,18 +84,29 @@ def read_specific_transactions(user: user_dependency, db: db_dependency, transac
 
     raise HTTPException(status_code=404, detail='Transaction not found')
 
-@app.post('/transactions')
-def create_transactions(user: user_dependency, db: db_dependency, new_transaction: TransactionCreate):
+@app.post('/transactions', status_code=201)
+def create_transactions(
+    user: user_dependency,
+    db: db_dependency,
+    new_transaction: TransactionCreate
+):
 
     if user is None:
-        raise HTTPException(status_code=401, detail='Failed Authentication')
+        raise HTTPException(
+            status_code=401,
+            detail='Failed Authentication'
+        )
 
-    transaction_model = Transaction(**new_transaction.model_dump(), owner_id=user.get('id'))
+    transaction_model = Transaction(
+        **new_transaction.model_dump(),
+        owner_id=user.get('id')
+    )
 
     db.add(transaction_model)
     db.commit()
+    db.refresh(transaction_model)
 
-    return JSONResponse(status_code=201, content={'message': 'Transaction created successfully'})
+    return transaction_model
 
 @app.put('/transactions/{transaction_id}')
 def update_transaction(user: user_dependency, db: db_dependency, transaction_id: int, update_transaction: TransactionUpdate):
