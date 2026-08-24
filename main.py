@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import models
 from models import User, Transaction
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 from database import engine, SessionLocal
 from fastapi.responses import JSONResponse
 from datetime import datetime
@@ -13,17 +13,16 @@ from router.auth import get_current_user
 app = FastAPI()
 
 class TransactionCreate(BaseModel):
-    id: int
     title: str
-    amount: float
-    type: str
+    amount: float = Field(gt=0)
+    type: Literal["income", "expense"]
     category: str
     date: datetime
 
 class TransactionUpdate(BaseModel):
     title: Optional[str] = Field(default=None)
-    amount: Optional[float] = Field(default=None)
-    type: Optional[str] = Field(default=None)
+    amount: Optional[float] = Field(default=None, gt=0)
+    type: Optional[Literal["income", "expense"]] = Field(default=None)
     category: Optional[str] = Field(default=None)
 
 models.Base.metadata.create_all(bind=engine)
@@ -39,7 +38,7 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-@app.get('/')
+@app.get('/transactions')
 def read_transactions(user: user_dependency, db: db_dependency):
 
     if user is None:
@@ -47,7 +46,32 @@ def read_transactions(user: user_dependency, db: db_dependency):
 
     return db.query(Transaction).filter(Transaction.owner_id == user.get('id')).all()
 
-@app.get('/transaction/{transaction_id}')
+@app.get('/transactions/filter')
+def filter_transactions(
+    user: user_dependency, db: db_dependency, 
+    type: Optional[str] = None, category: Optional[str] = None, 
+    minimum_amount: Optional[float] = None, maximum_amount: Optional[float] = None
+):
+    if user is None: 
+        raise HTTPException(status_code=401, detail='Failed Authentication')
+
+    query = db.query(Transaction).filter(Transaction.owner_id == user.get('id'))
+
+    if type is not None:
+        query = query.filter(Transaction.type == type)
+
+    if category is not None:
+        query = query.filter(Transaction.category == category)
+
+    if minimum_amount is not None:
+        query = query.filter(Transaction.amount >= minimum_amount)
+
+    if maximum_amount is not None:
+        query = query.filter(Transaction.amount <= maximum_amount)
+
+    return query.all()
+
+@app.get('/transactions/{transaction_id}')
 def read_specific_transactions(user: user_dependency, db: db_dependency, transaction_id: int):
 
     if user is None:
@@ -60,7 +84,7 @@ def read_specific_transactions(user: user_dependency, db: db_dependency, transac
 
     raise HTTPException(status_code=404, detail='Transaction not found')
 
-@app.post('/create')
+@app.post('/transactions')
 def create_transactions(user: user_dependency, db: db_dependency, new_transaction: TransactionCreate):
 
     if user is None:
@@ -73,7 +97,7 @@ def create_transactions(user: user_dependency, db: db_dependency, new_transactio
 
     return JSONResponse(status_code=201, content={'message': 'Transaction created successfully'})
 
-@app.put('/edit/{transaction_id}')
+@app.put('/transactions/{transaction_id}')
 def update_transaction(user: user_dependency, db: db_dependency, transaction_id: int, update_transaction: TransactionUpdate):
 
     if user is None:
@@ -93,7 +117,7 @@ def update_transaction(user: user_dependency, db: db_dependency, transaction_id:
 
     return JSONResponse(status_code=200, content={'message': 'Transaction updated successfully'})
 
-@app.delete('/delete/{transaction_id}')
+@app.delete('/transactions/{transaction_id}')
 def delete_transactions(user: user_dependency, db: db_dependency, transaction_id: int):
 
     if user is None:
