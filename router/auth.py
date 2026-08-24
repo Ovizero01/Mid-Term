@@ -53,7 +53,7 @@ def get_db():
     try: 
         yield db
     finally: 
-        db.clsoe()
+        db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
@@ -105,7 +105,7 @@ def update_user(user: user_dependency, db: db_dependency, update_user: UpdateUse
     user = db.query(User).filter(User.id == user.get('id')).first()
     update_data = update_user.model_dump(exclude_unset=True)
 
-    for key, value in update_data.itmes():
+    for key, value in update_data.items():
         setattr(user, key, value)
 
     db.commit()
@@ -123,7 +123,7 @@ def update_password(user: user_dependency, db: db_dependency, update_password: U
     if not bcrypt_context.verify(update_password.current_password, user.hash_password):
         raise HTTPException(status_code=401, detail='Wrong Password')
 
-    user.hash_password = bcrypt_context(update_password.new_password)
+    user.hash_password = bcrypt_context.hash(update_password.new_password)
 
     db.add(user)
     db.commit()
