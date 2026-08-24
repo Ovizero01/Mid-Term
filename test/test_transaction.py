@@ -65,16 +65,11 @@ def test_create_transaction():
     assert data['category'] == 'Food'
     assert data['owner_id'] == 1
 
-    # Remove the transaction created by this test
     db = SessionLocal()
 
     try:
-        db.query(Transaction).filter(
-            Transaction.id == data['id']
-        ).delete()
-
+        db.query(Transaction).filter(Transaction.id == data['id']).delete()
         db.commit()
-
     finally:
         db.close()
 
