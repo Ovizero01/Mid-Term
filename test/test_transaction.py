@@ -32,11 +32,11 @@ def test_transaction():
     finally:
         db.close()
 
-def test_read_transactions():
+def test_get_all_transactions():
     response = client.get('/transactions')
     assert response.status_code == status.HTTP_200_OK
 
-def test_read_specific_transactions():
+def test_get_transactions_by_id():
     response = client.get('/transactions/99')
     assert response.status_code == status.HTTP_200_OK
 

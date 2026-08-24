@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, Field
 import models
@@ -38,53 +38,7 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-@app.get('/transactions')
-def read_transactions(user: user_dependency, db: db_dependency):
-
-    if user is None:
-        raise HTTPException(status_code=401, detail='Failed Authentication')
-
-    return db.query(Transaction).filter(Transaction.owner_id == user.get('id')).all()
-
-@app.get('/transactions/filter')
-def filter_transactions(
-    user: user_dependency, db: db_dependency, 
-    type: Optional[str] = None, category: Optional[str] = None, 
-    minimum_amount: Optional[float] = None, maximum_amount: Optional[float] = None
-):
-    if user is None: 
-        raise HTTPException(status_code=401, detail='Failed Authentication')
-
-    query = db.query(Transaction).filter(Transaction.owner_id == user.get('id'))
-
-    if type is not None:
-        query = query.filter(Transaction.type == type)
-
-    if category is not None:
-        query = query.filter(Transaction.category == category)
-
-    if minimum_amount is not None:
-        query = query.filter(Transaction.amount >= minimum_amount)
-
-    if maximum_amount is not None:
-        query = query.filter(Transaction.amount <= maximum_amount)
-
-    return query.all()
-
-@app.get('/transactions/{transaction_id}')
-def read_specific_transactions(user: user_dependency, db: db_dependency, transaction_id: int):
-
-    if user is None:
-        raise HTTPException(status_code=401, detail='Failed Authentication')
-
-    specific_transaction = db.query(Transaction).filter(Transaction.owner_id == user.get('id')).filter(Transaction.id == transaction_id).first()
-
-    if specific_transaction is not None:
-        return specific_transaction
-
-    raise HTTPException(status_code=404, detail='Transaction not found')
-
-@app.post('/transactions', status_code=201)
+@app.post('/transactions', status_code=status.HTTP_201_CREATED)
 def create_transactions(
     user: user_dependency,
     db: db_dependency,
@@ -107,6 +61,27 @@ def create_transactions(
     db.refresh(transaction_model)
 
     return transaction_model
+
+@app.get('/transactions')
+def get_all_transactions(user: user_dependency, db: db_dependency):
+
+    if user is None:
+        raise HTTPException(status_code=401, detail='Failed Authentication')
+
+    return db.query(Transaction).filter(Transaction.owner_id == user.get('id')).all()
+
+@app.get('/transactions/{transaction_id}')
+def get_transaction_by_id(user: user_dependency, db: db_dependency, transaction_id: int):
+
+    if user is None:
+        raise HTTPException(status_code=401, detail='Failed Authentication')
+
+    specific_transaction = db.query(Transaction).filter(Transaction.owner_id == user.get('id')).filter(Transaction.id == transaction_id).first()
+
+    if specific_transaction is not None:
+        return specific_transaction
+
+    raise HTTPException(status_code=404, detail='Transaction not found')
 
 @app.put('/transactions/{transaction_id}')
 def update_transaction(user: user_dependency, db: db_dependency, transaction_id: int, update_transaction: TransactionUpdate):
@@ -144,10 +119,27 @@ def delete_transactions(user: user_dependency, db: db_dependency, transaction_id
 
     return JSONResponse(status_code=200, content={'message': 'Transaction deleted successfully'})
 
-@app.get('/user')
-def get_user(user: user_dependency, db: db_dependency):
-
-    if user is None:
+@app.get('/transactions/filter')
+def filter_transactions(
+    user: user_dependency, db: db_dependency, 
+    type: Optional[str] = None, category: Optional[str] = None, 
+    minimum_amount: Optional[float] = None, maximum_amount: Optional[float] = None
+):
+    if user is None: 
         raise HTTPException(status_code=401, detail='Failed Authentication')
 
-    return db.query(User).filter(User.id == user.get('id')).first()
+    query = db.query(Transaction).filter(Transaction.owner_id == user.get('id'))
+
+    if type is not None:
+        query = query.filter(Transaction.type == type)
+
+    if category is not None:
+        query = query.filter(Transaction.category == category)
+
+    if minimum_amount is not None:
+        query = query.filter(Transaction.amount >= minimum_amount)
+
+    if maximum_amount is not None:
+        query = query.filter(Transaction.amount <= maximum_amount)
+
+    return query.all()
