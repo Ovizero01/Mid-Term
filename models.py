@@ -11,7 +11,7 @@ class User(Base):
     hash_password = Column(String)
 
 class Transaction(Base):
-    __tablename__ = 'transaction'
+    __tablename__ = 'transactions'
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String)

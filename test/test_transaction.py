@@ -14,7 +14,7 @@ def override_get_current_user():
 
 app.dependency_overrides[get_current_user] = override_get_current_user
 
-def create_test_transaction():
+def test_transaction():
     db = SessionLocal()
     try:
         db.query(Transaction).filter(Transaction.id == 99).delete()
@@ -29,7 +29,6 @@ def create_test_transaction():
         )
         db.add(transaction)
         db.commit()
-
     finally:
         db.close()
 
@@ -38,7 +37,6 @@ def test_read_transactions():
     assert response.status_code == status.HTTP_200_OK
 
 def test_read_specific_transactions():
-    create_test_transaction()
     response = client.get('/transactions/99')
     assert response.status_code == status.HTTP_200_OK
 
@@ -61,8 +59,6 @@ def test_create_transaction():
     assert response.json() == {'message': 'Transaction created successfully'}
 
 def test_update_transaction():
-    create_test_transaction()
-
     request_data = {
         "title": "Updated"
     }
@@ -72,8 +68,6 @@ def test_update_transaction():
     assert response.json() == {'message': 'Transaction updated successfully'}
 
 def test_delete_transaction():
-    create_test_transaction()
-
     response = client.delete('/transactions/99')
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {'message': 'Transaction deleted successfully'}
