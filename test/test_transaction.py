@@ -47,6 +47,7 @@ def test_create_transaction():
     db.commit()
 
     request_data = {
+        "id": 0,
         "title": "Test Transaction",
         "amount": 250.50,
         "type": "expense",
